@@ -220,7 +220,7 @@ func TestSocks5(t *testing.T) {
 	defer c.Quit()
 
 	// POP3 authentication
-	if err := c.Auth("wanleypazlarb@outlook.com", "X1ldpR46"); err != nil {
+	if err := c.Auth("", ""); err != nil {
 		t.Fatalf("authentication failed: %s", err)
 	}
 	count, _, err := c.Stat()
