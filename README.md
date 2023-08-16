@@ -1,4 +1,4 @@
-# go-pop3
+# go-pop3-socks5
 
 [![GoDoc](https://godoc.org/github.com/alfonmga/go-pop3-socks5?status.svg&style=flat-square)](http://godoc.org/github.com/alfonmga/go-pop3-socks5)
 
