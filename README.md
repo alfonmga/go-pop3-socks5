@@ -1,17 +1,23 @@
 # go-pop3
 
+[![GoDoc](https://godoc.org/github.com/alfonmga/go-pop3-socks5?status.svg&style=flat-square)](http://godoc.org/github.com/alfonmga/go-pop3-socks5)
+
 A simple Go POP3 client library for connecting and reading mails from POP3 servers. This is a full rewrite of [TheCreeper/go-pop3](https://github.com/TheCreeper/go-pop3) with bug fixes and new features.
 
+## Fork changes
+
+- [x] Add SOCKS5 proxy support.
 
 ## Install
-`go get -u github.com/knadh/go-pop3`
 
+`go get -u github.com/alfonmga/go-pop3-socks5`
 
 ## Example
+
 ```go
 import (
 	"fmt"
-	"github.com/knadh/go-pop3"
+	"github.com/alfonmga/go-pop3-socks5"
 )
 
 func main() {
@@ -20,6 +26,8 @@ func main() {
 		Host: "pop.gmail.com",
 		Port: 995,
 		TLSEnabled: true,
+		TLSSkipVerify:   true,
+		Socks5ProxyAddr: "user:password@host:port",
 	})
 
 	// Create a new connection. POP3 connections are stateful and should end
@@ -62,10 +70,10 @@ func main() {
 }
 ```
 
-[![PkgGoDev](https://pkg.go.dev/badge/github.com/knadh/go-pop3)](https://pkg.go.dev/github.com/knadh/go-pop3)
-
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/alfonmga/go-pop3-socks5)](https://pkg.go.dev/github.com/alfonmga/go-pop3-socks5)
 
 ### To-do: tests
+
 Setup a Docker test environment that runs [InBucket](https://github.com/inbucket/inbucket) POP3 + SMTP server to run a dummy POP3 server and test all the commands in the lib.
 
 Licensed under the MIT License.

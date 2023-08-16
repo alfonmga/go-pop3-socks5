@@ -8,6 +8,7 @@ import (
 	"net/smtp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/emersion/go-message"
 	"github.com/emersion/go-message/mail"
@@ -199,4 +200,32 @@ func TestAll(t *testing.T) {
 	if err != nil {
 		t.Fatal("error using Quit method", err)
 	}
+}
+
+func TestSocks5(t *testing.T) {
+	t.Skip("Add your own SOCKS5 proxy to test this")
+
+	p := New(Opt{
+		Host:            "outlook.office365.com",
+		Port:            995,
+		Socks5ProxyAddr: "", // <- Add here
+		TLSSkipVerify:   true,
+		TLSEnabled:      true,
+		DialTimeout:     1 * time.Second,
+	})
+	c, err := p.NewConn()
+	if err != nil {
+		t.Fatalf("error establishing connection to pop3 server %s", err)
+	}
+	defer c.Quit()
+
+	// POP3 authentication
+	if err := c.Auth("wanleypazlarb@outlook.com", "X1ldpR46"); err != nil {
+		t.Fatalf("authentication failed: %s", err)
+	}
+	count, _, err := c.Stat()
+	if err != nil {
+		t.Fatalf("failed to get mailbox status: %s", err)
+	}
+	t.Logf("mailbox contains %d messages", count)
 }

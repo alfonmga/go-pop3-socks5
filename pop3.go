@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/emersion/go-message"
+	"golang.org/x/net/proxy"
 )
 
 // Client implements a Client e-mail client.
@@ -37,6 +38,9 @@ type Opt struct {
 
 	TLSEnabled    bool `json:"tls_enabled"`
 	TLSSkipVerify bool `json:"tls_skip_verify"`
+
+	// user:password@host:port
+	Socks5ProxyAddr string
 }
 
 // MessageID contains the ID and size of an individual message.
@@ -47,6 +51,13 @@ type MessageID struct {
 
 	// UID is only present if the response is to the UIDL command.
 	UID string
+}
+
+type socks5Proxy struct {
+	Host string
+	Port int
+	User *string
+	Pass *string
 }
 
 var (
@@ -78,6 +89,42 @@ func (c *Client) NewConn() (*Conn, error) {
 	conn, err := net.DialTimeout("tcp", addr, c.opt.DialTimeout)
 	if err != nil {
 		return nil, err
+	}
+
+	// Dial through a SOCKS5 proxy if configured.
+	if c.opt.Socks5ProxyAddr != "" {
+		// Parse the proxy address.
+		socks5Proxy, err := parseSocks5(c.opt.Socks5ProxyAddr)
+		if err != nil {
+			return nil, fmt.Errorf("socks5 proxy address: %v", err)
+		}
+		// Add authentication if configured.
+		var proxyAuth *proxy.Auth
+		if socks5Proxy.User != nil {
+			proxyAuth = &proxy.Auth{
+				User: *socks5Proxy.User,
+			}
+			if socks5Proxy.Pass != nil {
+				proxyAuth.Password = *socks5Proxy.Pass
+			}
+		}
+		// Dial through the proxy.
+		proxyDialer, err := proxy.SOCKS5(
+			"tcp",
+			fmt.Sprintf("%s:%d", socks5Proxy.Host, socks5Proxy.Port),
+			proxyAuth,
+			&net.Dialer{
+				Timeout: c.opt.DialTimeout,
+			},
+		)
+		if err != nil {
+			return nil, err
+		}
+		_conn, err := proxyDialer.Dial("tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+		conn = _conn // replace the original connection with the proxied one.
 	}
 
 	// No TLS.
@@ -431,4 +478,38 @@ func parseResp(b []byte) ([]byte, error) {
 	} else {
 		return nil, fmt.Errorf("unknown response: %s. Neither -ERR, nor +OK", string(b))
 	}
+}
+
+func parseSocks5(proxyAddress string) (*socks5Proxy, error) {
+	socks5Proxy := &socks5Proxy{}
+	addrParts := strings.Split(proxyAddress, "@")
+
+	switch len(addrParts) {
+	case 2:
+		proxyParts := strings.Split(addrParts[0], ":")
+		if len(proxyParts) != 2 {
+			return nil, errors.New("invalid user:password format")
+		}
+		socks5Proxy.User = &proxyParts[0]
+		socks5Proxy.Pass = &proxyParts[1]
+		proxyAddress = addrParts[1]
+	case 1:
+		break
+	default:
+		return nil, errors.New("invalid socks5 proxy address")
+	}
+
+	proxyParts := strings.Split(proxyAddress, ":")
+	if len(proxyParts) != 2 {
+		return nil, errors.New("invalid host:port format")
+	}
+
+	socks5Proxy.Host = proxyParts[0]
+	port, err := strconv.Atoi(proxyParts[1])
+	if err != nil {
+		return nil, fmt.Errorf("invalid port number: %v", err)
+	}
+	socks5Proxy.Port = port
+
+	return socks5Proxy, nil
 }
